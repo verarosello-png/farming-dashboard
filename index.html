@@ -204,12 +204,29 @@ const SELLERS={'1009100485 - COMPONENTES Y TECNOLOGIA DE MEXICO DDTECH SA DE CV'
 const CHURNED_SIDS=new Set(['1009100485','281584488','518179126']);
 const RPT_INACTIVE_WKS=4;
 
+// ── HELPERS (before state) ──────────────────────────────────────────────────
+function sellerSid(s){return s.split(' - ')[0].trim();}
+
+// Compute inactive sids (non-churned sellers with 0 shipments in last RPT_INACTIVE_WKS weeks)
+(function(){
+  const wkDates=[...new Set(RAW.filter(r=>r.KPI_PERIOD==='WEEK').map(r=>r.DATE_VALUE))].sort();
+  const lastWks=wkDates.slice(-RPT_INACTIVE_WKS);
+  // Build quick pivot per seller for WEEK shipments
+  const shipBySellerWk={};
+  RAW.forEach(r=>{if(r.KPI_PERIOD==='WEEK'&&r.kpi_name==='Shipments Volume'){if(!shipBySellerWk[r.seller])shipBySellerWk[r.seller]={};shipBySellerWk[r.seller][r.DATE_VALUE]=(shipBySellerWk[r.seller][r.DATE_VALUE]||0)+r.kpi_value;}});
+  window._INACTIVE_SIDS=new Set(Object.keys(SELLERS).filter(s=>{
+    if(CHURNED_SIDS.has(sellerSid(s)))return false; // churned handled separately
+    const sw=shipBySellerWk[s]||{};
+    return !lastWks.some(p=>(sw[p]||0)>0);
+  }).map(sellerSid));
+})();
+const INACTIVE_SIDS=window._INACTIVE_SIDS;
+
 // ── STATE ────────────────────────────────────────────────────────────────────
 let view='week';
 let wStart=null;
 let MAX_P=8;
-function sellerSid(s){return s.split(' - ')[0].trim();}
-let selectedSellers=new Set(Object.keys(SELLERS).filter(s=>!CHURNED_SIDS.has(sellerSid(s))));
+let selectedSellers=new Set(Object.keys(SELLERS).filter(s=>!CHURNED_SIDS.has(sellerSid(s))&&!INACTIVE_SIDS.has(sellerSid(s))));
 let rptMaxWeek=null;
 let rptMaxMonth=null;
 
@@ -811,9 +828,14 @@ function initSellerUI(){
   allRow.onclick=function(e){if(e.target!==allCb){allCb.checked=!allCb.checked;toggleAllSellers(allCb.checked);}};
   menu.appendChild(allRow);
   const sep=document.createElement('div');sep.className='seller-dd-sep';menu.appendChild(sep);
-  // Individual sellers — churneados al final con separador
-  const active=[],churned=[];
-  Object.entries(SELLERS).forEach(([sid,cfg])=>{(CHURNED_SIDS.has(sellerSid(sid))?churned:active).push([sid,cfg]);});
+  // Individual sellers — inactivos y churneados al final con separador
+  const active=[],inactive=[],churned=[];
+  Object.entries(SELLERS).forEach(([sid,cfg])=>{
+    const id=sellerSid(sid);
+    if(CHURNED_SIDS.has(id))churned.push([sid,cfg]);
+    else if(INACTIVE_SIDS.has(id))inactive.push([sid,cfg]);
+    else active.push([sid,cfg]);
+  });
   function addRow(sid,cfg){
     const row=document.createElement('div');row.className='seller-dd-item';
     const cb=document.createElement('input');
@@ -827,11 +849,18 @@ function initSellerUI(){
     container.appendChild(buildSellerCard(sid,cfg));
   }
   active.forEach(([s,c])=>addRow(s,c));
-  if(churned.length){
+  if(inactive.length){
     const s2=document.createElement('div');s2.className='seller-dd-sep';menu.appendChild(s2);
     const lbl=document.createElement('div');
     lbl.style.cssText='font-size:9px;color:var(--muted);padding:4px 14px;text-transform:uppercase;letter-spacing:.3px;';
-    lbl.textContent='Churneados';menu.appendChild(lbl);
+    lbl.textContent='Sin actividad reciente';menu.appendChild(lbl);
+    inactive.forEach(([s,c])=>addRow(s,c));
+  }
+  if(churned.length){
+    const s3=document.createElement('div');s3.className='seller-dd-sep';menu.appendChild(s3);
+    const lbl2=document.createElement('div');
+    lbl2.style.cssText='font-size:9px;color:var(--muted);padding:4px 14px;text-transform:uppercase;letter-spacing:.3px;';
+    lbl2.textContent='Churneados';menu.appendChild(lbl2);
     churned.forEach(([s,c])=>addRow(s,c));
   }
   updateDdLabel();
