@@ -562,7 +562,7 @@ function volDs(ps,pvt){
 }
 function volDsTotal(ps,selSpvt){
   const S=Object.keys(selSpvt);
-  function totMe(p){let wS=0,wT=0;S.forEach(sid=>{const m=g(selSpvt[sid],p,'ME Adoption Rate'),v=g(selSpvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;}
+  function totMe(p){const shp=S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Shipments Volume')||0),0),tpn=S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Potential MP Payments')||0),0);return tpn>0?shp/tpn:null;}
   const meArr=ps.map(p=>{const m=totMe(p);return m!==null?Math.min(m*100,100):null;});
   // 'Desacoplados sin MP' en BQ = total desacoplado; 'con MP' = solo porción MP
   const totDes=ps.map(p=>S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Desacoplados sin MP')||0),0));
@@ -719,14 +719,14 @@ function renderReport(){
   const wLabels=cols.map(p=>'W'+meliWeek(p)+(meliWeek(p)>=curWkNum?' *':''));
   const activeCount=rptActiveSids.filter(sid=>g(spvt[sid],wL,'Shipments Volume')>0).length;
   const totShp=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],wL,'Shipments Volume')||0),0);
-  const totMEw=(p=>{let wS=0,wT=0;rptActiveSids.forEach(sid=>{const m=g(spvt[sid],p,'ME Adoption Rate'),v=g(spvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;})(wL);
+  const totMEw=(()=>{const tpn=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],wL,'Potential MP Payments')||0),0);return tpn>0?totShp/tpn:null;})();
   const totStdW=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],wL,'Oferta Standard')||0),0);
   const totEcoW=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],wL,'Oferta Económica')||0),0);
   const totOfeW=totStdW+totEcoW;
   const wTotFns={
     val:(p,kpi)=>rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],p,kpi)||0),0),
     tpn:(p)=>{let t=0;rptActiveSids.forEach(sid=>{const v=getTPN(spvt[sid],p);if(v!==null)t+=v;});return t>0?t:null;},
-    me:(p)=>{let wS=0,wT=0;rptActiveSids.forEach(sid=>{const m=g(spvt[sid],p,'ME Adoption Rate'),v=g(spvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;}
+    me:(p)=>{const shp=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],p,'Shipments Volume')||0),0),tpn=rptActiveSids.reduce((s,sid)=>s+(g(spvt[sid],p,'Potential MP Payments')||0),0);return tpn>0?shp/tpn:null;}
   };
 
   document.getElementById('rpt-header').innerHTML=
@@ -758,12 +758,12 @@ function renderReport(){
   const mTotFns={
     val:(p,kpi)=>rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],p,kpi)||0),0),
     tpn:(p)=>{let t=0;rptActiveSids.forEach(sid=>{const v=getTPN(mspvt[sid],p);if(v!==null)t+=v;});return t>0?t:null;},
-    me:(p)=>{let wS=0,wT=0;rptActiveSids.forEach(sid=>{const m=g(mspvt[sid],p,'ME Adoption Rate'),v=g(mspvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;}
+    me:(p)=>{const shp=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],p,'Shipments Volume')||0),0),tpn=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],p,'Potential MP Payments')||0),0);return tpn>0?shp/tpn:null;}
   };
   // Monthly KPI strip values
   const mTotShp=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],mLast,'Shipments Volume')||0),0);
   const mActiveCnt=rptActiveSids.filter(sid=>(g(mspvt[sid],mLast,'Shipments Volume')||0)>0).length;
-  const mTotME=(()=>{let wS=0,wT=0;rptActiveSids.forEach(sid=>{const m=g(mspvt[sid],mLast,'ME Adoption Rate'),v=g(mspvt[sid],mLast,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;})();
+  const mTotME=(()=>{const tpn=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],mLast,'Potential MP Payments')||0),0);return tpn>0?mTotShp/tpn:null;})();
   const mTotStd=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],mLast,'Oferta Standard')||0),0);
   const mTotEco=rptActiveSids.reduce((s,sid)=>s+(g(mspvt[sid],mLast,'Oferta Económica')||0),0);
   const mTotOfe=mTotStd+mTotEco;
@@ -895,19 +895,15 @@ function renderAll(){
   Object.keys(SELLERS).forEach(sid=>{spvt[sid]=pivot(getRows(sid));});
   const last=ps[ps.length-1],prev=ps[ps.length-2]||null;
 
-  function totMe(p){
-    let wS=0,wT=0;
-    selIds.forEach(sid=>{const m=g(spvt[sid],p,'ME Adoption Rate'),v=g(spvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});
-    return wT>0?wS/wT:null;
-  }
+  function totMe(p){const shp=selIds.reduce((s,sid)=>s+(g(spvt[sid],p,'Shipments Volume')||0),0),tpn=selIds.reduce((s,sid)=>s+(g(spvt[sid],p,'Potential MP Payments')||0),0);return tpn>0?shp/tpn:null;}
 
   if(isAll){
     // Acumulado total
     const tAcumShip=ps.reduce((s,p)=>s+selIds.reduce((ss,sid)=>ss+(g(spvt[sid],p,'Shipments Volume')||0),0),0);
-    let meW=0,meV=0;
-    ps.forEach(p=>selIds.forEach(sid=>{const m=g(spvt[sid],p,'ME Adoption Rate'),v=g(spvt[sid],p,'Shipments Volume')??1;if(m!==null){meW+=m*v;meV+=v;}}));
+    let tpnAcum=0;
+    ps.forEach(p=>selIds.forEach(sid=>{tpnAcum+=(g(spvt[sid],p,'Potential MP Payments')||0);}));
     setText('t-acum-ship',num(tAcumShip));
-    setText('t-acum-me',meV>0?pct(meW/meV):'—');
+    setText('t-acum-me',tpnAcum>0?pct(tAcumShip/tpnAcum):'—');
     // Último período
     const tS=selIds.reduce((s,sid)=>s+(g(spvt[sid],last,'Shipments Volume')||0),0);
     const tSP=prev?selIds.reduce((s,sid)=>s+(g(spvt[sid],prev,'Shipments Volume')||0),0):null;
