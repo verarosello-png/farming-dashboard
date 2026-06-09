@@ -550,7 +550,7 @@ function meLine(ps,pvt){
 }
 function volDs(ps,pvt){
   return[
-    {type:'bar',label:'Acoplado',data:ps.map(p=>g(pvt,p,'Acoplado')??0),
+    {type:'bar',label:'Acoplado',data:ps.map(p=>{const a=g(pvt,p,'Acoplado');if(a!==null)return a;const shp=g(pvt,p,'Shipments Volume')||0,dc=g(pvt,p,'Desacoplados con MP')||0,ds=g(pvt,p,'Desacoplados sin MP')||0;return Math.max(0,shp-dc-ds);}),
       backgroundColor:'#3483FA99',borderColor:'#3483FA',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
     {type:'bar',label:'Desacoplado c/MP',data:ps.map(p=>g(pvt,p,'Desacoplados con MP')??g(pvt,p,'Desacoplado')??0),
       backgroundColor:'#ECB22E99',borderColor:'#ECB22E',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
@@ -563,9 +563,17 @@ function volDsTotal(ps,selSpvt){
   const S=Object.keys(selSpvt);
   function totMe(p){let wS=0,wT=0;S.forEach(sid=>{const m=g(selSpvt[sid],p,'ME Adoption Rate'),v=g(selSpvt[sid],p,'Shipments Volume')??1;if(m!==null){wS+=m*v;wT+=v;}});return wT>0?wS/wT:null;}
   const meArr=ps.map(p=>{const m=totMe(p);return m!==null?Math.min(m*100,100):null;});
-  const aco=ps.map(p=>S.reduce((s,sid)=>{const a=g(selSpvt[sid],p,'Acoplado');return s+(a!==null?a:(g(selSpvt[sid],p,'Shipments Volume')||0));},0));
   const dcmp=ps.map(p=>S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Desacoplados con MP')||0),0));
   const dsmp=ps.map(p=>S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Desacoplados sin MP')||0),0));
+  // Acoplado = SHP Volume − Desacoplados: evita doble conteo cuando Acoplado no existe en pivot
+  const aco=ps.map((p,i)=>S.reduce((s,sid)=>{
+    const a=g(selSpvt[sid],p,'Acoplado');
+    if(a!==null)return s+a;
+    const shp=g(selSpvt[sid],p,'Shipments Volume')||0;
+    const dc=g(selSpvt[sid],p,'Desacoplados con MP')||0;
+    const ds=g(selSpvt[sid],p,'Desacoplados sin MP')||0;
+    return s+Math.max(0,shp-dc-ds);
+  },0));
   return[
     {type:'bar',label:'Acoplado',data:aco,backgroundColor:'#3483FA99',borderColor:'#3483FA',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
     {type:'bar',label:'Desacoplado c/MP',data:dcmp,backgroundColor:'#ECB22E99',borderColor:'#ECB22E',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
