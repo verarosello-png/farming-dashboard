@@ -293,7 +293,7 @@ function setView(v,btn){
 // ── MONTHLY AGGREGATION ──────────────────────────────────────────────────────
 const SUM_KPIS=['Shipments Volume','TPV','TPV c/ shipment ME','TPV s/ shipment ME',
   'Acoplado','Desacoplado','Desacoplados con MP','Desacoplados sin MP',
-  'Oferta Standard','Oferta Económica','Oportunidad TPN sin MP','Total TPN'];
+  'Oferta Standard','Oferta Económica','Oportunidad TPN sin MP','Total TPN','Potential MP Payments'];
 function aggregateToMonthly(weekRows){
   const byM={};
   weekRows.forEach(r=>{const m=r.DATE_VALUE.substring(0,7);if(!byM[m])byM[m]=[];byM[m].push(r);});
@@ -535,9 +535,8 @@ function aspOpts(){return{responsive:true,maintainAspectRatio:false,showBarVals:
 function tpnDs(ps,pvt){
   return{type:'line',label:'TPN',showLine:false,
     data:ps.map(p=>{
-      const tpn=g(pvt,p,'Total TPN');if(tpn!==null&&tpn>0)return tpn;
-      const s=g(pvt,p,'Shipments Volume'),m=g(pvt,p,'ME Adoption Rate');
-      return(s!==null&&m!==null&&m>0)?s/m:null;
+      const tpn=g(pvt,p,'Potential MP Payments');if(tpn!==null&&tpn>0)return tpn;
+      return null;
     }),
     pointStyle:'dash',pointRadius:10,pointBorderWidth:3,
     borderColor:'#E01E5A',backgroundColor:'#E01E5A',yAxisID:'yL',order:0};
@@ -550,7 +549,7 @@ function meLine(ps,pvt){
 }
 function volDs(ps,pvt){
   return[
-    {type:'bar',label:'Acoplado',data:ps.map(p=>{const a=g(pvt,p,'Acoplado');if(a!==null)return a;const shp=g(pvt,p,'Shipments Volume')||0,dc=g(pvt,p,'Desacoplados con MP')||0,ds=g(pvt,p,'Desacoplados sin MP')||0;return Math.max(0,shp-dc-ds);}),
+    {type:'bar',label:'Acoplado',data:ps.map(p=>{const shp=g(pvt,p,'Shipments Volume')||0,dc=g(pvt,p,'Desacoplados con MP')||0,ds=g(pvt,p,'Desacoplados sin MP')||0;return Math.max(0,shp-dc-ds);}),
       backgroundColor:'#3483FA99',borderColor:'#3483FA',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
     {type:'bar',label:'Desacoplado c/MP',data:ps.map(p=>g(pvt,p,'Desacoplados con MP')??g(pvt,p,'Desacoplado')??0),
       backgroundColor:'#ECB22E99',borderColor:'#ECB22E',borderWidth:1,borderRadius:3,yAxisID:'yL',order:2},
@@ -565,10 +564,8 @@ function volDsTotal(ps,selSpvt){
   const meArr=ps.map(p=>{const m=totMe(p);return m!==null?Math.min(m*100,100):null;});
   const dcmp=ps.map(p=>S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Desacoplados con MP')||0),0));
   const dsmp=ps.map(p=>S.reduce((s,sid)=>s+(g(selSpvt[sid],p,'Desacoplados sin MP')||0),0));
-  // Acoplado = SHP Volume − Desacoplados: evita doble conteo cuando Acoplado no existe en pivot
+  // Acoplado = SHP Volume − Desacoplados: garantiza que barra total = Shipments Volume
   const aco=ps.map((p,i)=>S.reduce((s,sid)=>{
-    const a=g(selSpvt[sid],p,'Acoplado');
-    if(a!==null)return s+a;
     const shp=g(selSpvt[sid],p,'Shipments Volume')||0;
     const dc=g(selSpvt[sid],p,'Desacoplados con MP')||0;
     const ds=g(selSpvt[sid],p,'Desacoplados sin MP')||0;
@@ -582,7 +579,7 @@ function volDsTotal(ps,selSpvt){
       borderColor:'#00A650',backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00A650',
       tension:0.3,spanGaps:true,yAxisID:'yR',order:1},
     {type:'line',label:'TPN',showLine:false,
-      data:ps.map(p=>{let t=0;S.forEach(sid=>{const tpn=g(selSpvt[sid],p,'Total TPN');if(tpn!==null&&tpn>0){t+=tpn;return;}const s=g(selSpvt[sid],p,'Shipments Volume'),m=g(selSpvt[sid],p,'ME Adoption Rate');if(s!==null&&m!==null&&m>0)t+=s/m;});return t>0?t:null;}),
+      data:ps.map(p=>{let t=0;S.forEach(sid=>{const tpn=g(selSpvt[sid],p,'Potential MP Payments');if(tpn!==null&&tpn>0)t+=tpn;});return t>0?t:null;}),
       pointStyle:'dash',pointRadius:10,pointBorderWidth:3,borderColor:'#E01E5A',backgroundColor:'#E01E5A',yAxisID:'yL',order:0}
   ];
 }
@@ -633,7 +630,7 @@ function renderReport(){
     '</div>';
 
   // ── Shared helpers ──────────────────────────────────────────────────────
-  function getTPN(pvt,p){const t=g(pvt,p,'Total TPN');if(t!==null&&t>0)return t;const s=g(pvt,p,'Shipments Volume'),m=g(pvt,p,'ME Adoption Rate');return(s!==null&&m!==null&&m>0)?s/m:null;}
+  function getTPN(pvt,p){const t=g(pvt,p,'Potential MP Payments');if(t!==null&&t>0)return t;return null;}
   function wowPct(c,pr){if(c===null||pr===null||pr===0)return'<span class="rpt-neu">—</span>';const d=(c-pr)/Math.abs(pr)*100;return'<span class="'+(d>=0?'rpt-pos':'rpt-neg')+'">'+(d>=0?'+':'')+d.toFixed(0)+'%</span>';}
   function wowPp(c,pr){if(c===null||pr===null)return'<span class="rpt-neu">—</span>';const d=(c-pr)*100;return'<span class="'+(d>=0?'rpt-pos':'rpt-neg')+'">'+(d>=0?'+':'')+d.toFixed(0)+'pp</span>';}
   function pagoStr(pvt,p){const dc=g(pvt,p,'Desacoplados con MP')||0,ds=g(pvt,p,'Desacoplados sin MP')||0,tot=dc+ds;if(!tot)return'N/A';const mp=Math.round(dc/tot*100);return'MP '+mp+'% / EXT '+(100-mp)+'%';}
