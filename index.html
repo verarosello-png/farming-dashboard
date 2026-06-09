@@ -208,7 +208,8 @@ const RPT_INACTIVE_WKS=4;
 let view='week';
 let wStart=null;
 let MAX_P=8;
-let selectedSellers=new Set(Object.keys(SELLERS).filter(s=>!CHURNED_SIDS.has(s)));
+function sellerSid(s){return s.split(' - ')[0].trim();}
+let selectedSellers=new Set(Object.keys(SELLERS).filter(s=>!CHURNED_SIDS.has(sellerSid(s))));
 let rptMaxWeek=null;
 let rptMaxMonth=null;
 
@@ -428,7 +429,7 @@ const labelsPlugin={
     }
   }
 };
-Chart.register(labelsPlugin);
+if(typeof Chart!=='undefined'){try{Chart.register(labelsPlugin);}catch(e){console.warn('Chart.register failed:',e);}}
 
 // ── SELLER FILTER ────────────────────────────────────────────────────────────
 function toggleSellerDd(e){
@@ -588,7 +589,7 @@ function renderReport(){
   // ── Shared constants (needed for both filter bar and tables) ─────────────
   const allSids=Object.keys(SELLERS);
   // Sellers activos en el reporte: excluir churneados
-  const rptSids=allSids.filter(sid=>!CHURNED_SIDS.has(sid));
+  const rptSids=allSids.filter(sid=>!CHURNED_SIDS.has(sellerSid(sid)));
   const MONTHS_ES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const curMonthStr=todayStr.substring(0,7)+'-01';
   const allMonths=[...new Set(rptSids.flatMap(sid=>RAW.filter(r=>r.seller===sid&&r.KPI_PERIOD==='MONTH').map(r=>r.DATE_VALUE)))].sort();
@@ -812,7 +813,7 @@ function initSellerUI(){
   const sep=document.createElement('div');sep.className='seller-dd-sep';menu.appendChild(sep);
   // Individual sellers — churneados al final con separador
   const active=[],churned=[];
-  Object.entries(SELLERS).forEach(([sid,cfg])=>{(CHURNED_SIDS.has(sid)?churned:active).push([sid,cfg]);});
+  Object.entries(SELLERS).forEach(([sid,cfg])=>{(CHURNED_SIDS.has(sellerSid(sid))?churned:active).push([sid,cfg]);});
   function addRow(sid,cfg){
     const row=document.createElement('div');row.className='seller-dd-item';
     const cb=document.createElement('input');
@@ -939,9 +940,8 @@ function renderAll(){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-initSellerUI();
-initPicker(getAllPs());
-renderAll();
+try{initSellerUI();}catch(e){console.error('initSellerUI error:',e);document.body.insertAdjacentHTML('beforeend','<div style="position:fixed;top:0;left:0;right:0;background:#E01E5A;color:#fff;padding:10px;font-size:13px;z-index:9999">Error de inicio: '+e.message+'</div>');}
+try{initPicker(getAllPs());renderAll();}catch(e){console.error('renderAll error:',e);}
 </script>
 </body>
 </html>
