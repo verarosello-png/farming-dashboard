@@ -382,6 +382,14 @@ const labelsPlugin={
     const pctOnly=!!chart.config.options.pctOnly;
     const topFmt=chart.config.options.topFmt||'num';
     const ctx=chart.ctx,n=chart.data.labels?.length||0;
+    // Pre-collect ME Rate and TPN Y positions per column for overlap detection
+    const meYArr=new Array(n).fill(null);
+    const tpnYArr=new Array(n).fill(null);
+    chart.data.datasets.forEach((ds,di)=>{
+      const meta=chart.getDatasetMeta(di);
+      if(ds.showMeLabels){meta.data.forEach((pt,j)=>{if(ds.data[j]!=null)meYArr[j]=pt.y;});}
+      if(ds.label==='TPN'){meta.data.forEach((pt,j)=>{if(ds.data[j]!=null)tpnYArr[j]=pt.y;});}
+    });
     if(chart.config.options.showPct){
       for(let j=0;j<n;j++){
         const bars=chart.data.datasets.map((ds,di)=>{
@@ -405,14 +413,26 @@ const labelsPlugin={
         });
         if(topY<Infinity&&total>0){
           const totalStr=topFmt==='cur'?cur(total):Math.round(total).toString();
-          ctx.save();ctx.font='700 10px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+          ctx.save();ctx.font='700 10px -apple-system,sans-serif';ctx.textAlign='center';
           const tw=ctx.measureText(totalStr).width;
-          ctx.fillStyle='rgba(255,255,255,0.88)';ctx.fillRect(bars[0].bar.x-tw/2-3,topY-15,tw+6,13);
-          ctx.fillStyle='#374151';ctx.fillText(totalStr,bars[0].bar.x,topY-3);ctx.restore();
+          // Detect overlap: bar-total rect is topY-15..topY-2; ME rect is meY-20..meY-8
+          // Overlap when both rects share vertical space
+          const meY=meYArr[j],tpnY=tpnYArr[j];
+          const lineConflictY=meY!==null?meY:(tpnY!==null?tpnY:null);
+          const conflict=lineConflictY!==null&&(lineConflictY-topY)>-8&&(lineConflictY-topY)<20;
+          if(conflict){
+            // Draw total inside bar near top: dark semi-transparent bg + white text
+            ctx.fillStyle='rgba(0,0,0,0.20)';ctx.fillRect(bars[0].bar.x-tw/2-3,topY+2,tw+6,14);
+            ctx.fillStyle='#fff';ctx.textBaseline='top';ctx.fillText(totalStr,bars[0].bar.x,topY+4);
+          }else{
+            ctx.fillStyle='rgba(255,255,255,0.88)';ctx.fillRect(bars[0].bar.x-tw/2-3,topY-15,tw+6,13);
+            ctx.fillStyle='#374151';ctx.textBaseline='bottom';ctx.fillText(totalStr,bars[0].bar.x,topY-3);
+          }
+          ctx.restore();
         }
       }
     }
-    // ME Rate % above line
+    // ME Rate % — position above dot; shift further up if TPN label would overlap
     chart.data.datasets.forEach((ds,di)=>{
       if(!ds.showMeLabels)return;
       const meta=chart.getDatasetMeta(di);
@@ -420,9 +440,14 @@ const labelsPlugin={
         const val=ds.data[j];if(val===null||val===undefined)return;
         ctx.save();ctx.font='700 9px -apple-system,sans-serif';
         const meStr=Math.round(val)+'%';const meW=ctx.measureText(meStr).width;
-        ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(pt.x-meW/2-2,pt.y-20,meW+4,12);
+        // TPN rect is tpnY-26..tpnY-14; ME rect normally pt.y-20..pt.y-8
+        // If they overlap, push ME label up by 14px extra
+        const tpnY=tpnYArr[j];
+        const tpnConflict=tpnY!==null&&(pt.y-tpnY)>=-18&&(pt.y-tpnY)<=6;
+        const off=tpnConflict?34:20;
+        ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(pt.x-meW/2-2,pt.y-off,meW+4,12);
         ctx.fillStyle='#00A650';ctx.textAlign='center';ctx.textBaseline='bottom';
-        ctx.fillText(meStr,pt.x,pt.y-9);ctx.restore();
+        ctx.fillText(meStr,pt.x,pt.y-(off-11));ctx.restore();
       });
     });
     // TPN value above dash
