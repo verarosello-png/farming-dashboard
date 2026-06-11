@@ -198,7 +198,7 @@ const RAW=[{"DATE_VALUE":"2025-09-01","KPI_PERIOD":"DAY","kpi_name":"ASP s/ ship
 // ── SELLERS ─────────────────────────────────────────────────────────────────
 const SELLERS={'1009100485 - COMPONENTES Y TECNOLOGIA DE MEXICO DDTECH SA DE CV':{name:'COMPONENTES Y TECNOLOGIA DE MEXICO DDTECH SA DE CV'},'118533758 - Faly Music':{name:'Faly Music'},'1710476339 - DERMA DEPOT':{name:'DERMA DEPOT'},'180838809 - BGS technic de México SA de CV':{name:'BGS technic de México SA de CV'},'2087872279 - ECOPRODUCTOS TEXTILES':{name:'ECOPRODUCTOS TEXTILES'},'281584488 - Vidafull y Primetech Nutrition':{name:'Vidafull y Primetech Nutrition'},'337842388 - HANNY PULIDO COSMETICOS':{name:'HANNY PULIDO COSMETICOS'},'409589695 - Matcha Mexico':{name:'Matcha Mexico'},'417923030 - Universe nutrition':{name:'Universe nutrition'},'454333952 - Xiaomi Oficial':{name:'Xiaomi Oficial'},'5103803 - Vapotlán':{name:'Vapotlán'},'518179126 - Grupo Esquimal':{name:'Grupo Esquimal'},'52498882 - FunkiToy':{name:'FunkiToy'},'585751061 - ':{name:'Toyo Foods'},'76712625 - UNIT Electronics':{name:'UNIT Electronics'}};
 
-const LAST_UPDATE='11/06/2026 10:36';
+const LAST_UPDATE='11/06/2026 10:55';
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 // Sellers permanentemente excluidos ya se filtran en SQL (2458966207, 3382925975)
 // Sellers churneados: se excluyen por defecto del dashboard y siempre del Reporte
@@ -405,8 +405,10 @@ const labelsPlugin={
         });
         if(topY<Infinity&&total>0){
           const totalStr=topFmt==='cur'?cur(total):Math.round(total).toString();
-          ctx.save();ctx.font='700 10px -apple-system,sans-serif';ctx.fillStyle='#374151';ctx.textAlign='center';ctx.textBaseline='bottom';
-          ctx.fillText(totalStr,bars[0].bar.x,topY-2);ctx.restore();
+          ctx.save();ctx.font='700 10px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+          const tw=ctx.measureText(totalStr).width;
+          ctx.fillStyle='rgba(255,255,255,0.88)';ctx.fillRect(bars[0].bar.x-tw/2-3,topY-15,tw+6,13);
+          ctx.fillStyle='#374151';ctx.fillText(totalStr,bars[0].bar.x,topY-3);ctx.restore();
         }
       }
     }
@@ -417,8 +419,10 @@ const labelsPlugin={
       meta.data.forEach((pt,j)=>{
         const val=ds.data[j];if(val===null||val===undefined)return;
         ctx.save();ctx.font='700 9px -apple-system,sans-serif';
+        const meStr=Math.round(val)+'%';const meW=ctx.measureText(meStr).width;
+        ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(pt.x-meW/2-2,pt.y-20,meW+4,12);
         ctx.fillStyle='#00A650';ctx.textAlign='center';ctx.textBaseline='bottom';
-        ctx.fillText(Math.round(val)+'%',pt.x,pt.y-6);ctx.restore();
+        ctx.fillText(meStr,pt.x,pt.y-9);ctx.restore();
       });
     });
     // TPN value above dash
@@ -428,8 +432,10 @@ const labelsPlugin={
       meta.data.forEach((pt,j)=>{
         const val=ds.data[j];if(val===null||val===undefined)return;
         ctx.save();ctx.font='700 9px -apple-system,sans-serif';
+        const tpnStr=Math.round(val).toString();const tpnW=ctx.measureText(tpnStr).width;
+        ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(pt.x-tpnW/2-2,pt.y-26,tpnW+4,12);
         ctx.fillStyle='#E01E5A';ctx.textAlign='center';ctx.textBaseline='bottom';
-        ctx.fillText(Math.round(val),pt.x,pt.y-14);ctx.restore();
+        ctx.fillText(tpnStr,pt.x,pt.y-15);ctx.restore();
       });
     });
     // Individual bar values (ASP chart)
