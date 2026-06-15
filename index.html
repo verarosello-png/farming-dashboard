@@ -664,7 +664,7 @@ function renderReport(){
   function getTPN(pvt,p){const t=g(pvt,p,'Potential MP Payments');if(t!==null&&t>0)return t;return null;}
   function wowPct(c,pr){if(c===null||pr===null||pr===0)return'<span class="rpt-neu">—</span>';const d=(c-pr)/Math.abs(pr)*100;return'<span class="'+(d>=0?'rpt-pos':'rpt-neg')+'">'+(d>=0?'+':'')+d.toFixed(0)+'%</span>';}
   function wowPp(c,pr){if(c===null||pr===null)return'<span class="rpt-neu">—</span>';const d=(c-pr)*100;return'<span class="'+(d>=0?'rpt-pos':'rpt-neg')+'">'+(d>=0?'+':'')+d.toFixed(0)+'pp</span>';}
-  function pagoStr(pvt,p){const dc=g(pvt,p,'Desacoplados con MP')||0,ds=g(pvt,p,'Desacoplados sin MP')||0,tot=dc+ds;if(!tot)return'N/A';const mp=Math.round(dc/tot*100);return'MP '+mp+'% / EXT '+(100-mp)+'%';}
+  function pagoStr(pvt,p){const dc=g(pvt,p,'Desacoplados con MP')||0,tot=g(pvt,p,'Desacoplados sin MP')||0;if(!tot)return'N/A';const mp=Math.round(dc/tot*100);return'MP '+mp+'% / EXT '+(100-mp)+'%';}
   function ofertaStr(pvt,p){const s=g(pvt,p,'Oferta Standard')||0,e=g(pvt,p,'Oferta Económica')||0,tot=s+e;if(!tot)return'—';const sp=Math.round(s/tot*100);return'Std '+sp+'% / Eco '+(100-sp)+'%';}
   function sellerMeta(sid){
     const rows=RAW.filter(r=>r.seller===sid&&r.KPI_PERIOD==='WEEK');
