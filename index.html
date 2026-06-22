@@ -672,7 +672,7 @@ function renderReport(){
     const recentRows=rows.filter(r=>recentDates.includes(r.DATE_VALUE));
     const rVol=recentRows.filter(r=>r.kpi_name==='Shipments Volume').reduce((s,r)=>s+r.kpi_value,0);
     const rDes=recentRows.filter(r=>r.kpi_name==='Desacoplados sin MP').reduce((s,r)=>s+r.kpi_value,0);
-    const hasDesacopl=rVol>0&&(rDes/rVol)>0.01;
+    const hasDesacopl=sellerSid(sid)!=='585751061'&&rVol>0&&(rDes/rVol)>0.01;
     const volDates=rows.filter(r=>r.kpi_name==='Shipments Volume'&&r.kpi_value>0).map(r=>r.DATE_VALUE).sort();
     let actStr='';if(volDates.length){const dt=new Date(volDates[0]+'T00:00:00');actStr='Act. '+MONTHS_ES[dt.getMonth()]+" '"+String(dt.getFullYear()).slice(2)+' · ';}
     return actStr+(hasDesacopl?'Desacoplado':'Acoplado');
