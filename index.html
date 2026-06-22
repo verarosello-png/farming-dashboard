@@ -733,7 +733,7 @@ function renderReport(){
           '<tr>'+
             '<td class="rpt-td rpt-seller"><span class="rpt-rank">#'+(i+1)+'</span><strong>'+SELLERS[sid].name+'</strong><span class="rpt-seller-sub">'+meta+'</span></td>'+
             grpN(pvt,'Shipments Volume')+grpN(pvt,'Total TPN')+grpM(pvt,false)+
-            '<td class="rpt-td rpt-grp-sep">'+pagoStr(pvt,lastP)+'</td>'+
+            '<td class="rpt-td rpt-grp-sep">'+(sid.startsWith('585751061')?'N/A':pagoStr(pvt,lastP))+'</td>'+
             '<td class="rpt-td rpt-grp-sep">'+ofertaStr(pvt,lastP)+'</td>'+
           '</tr>';
       });
